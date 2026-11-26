@@ -12,7 +12,8 @@
     * ARM only. This script calls the Azure Resource Manager Authorization provider.
       It makes NO Microsoft Graph calls, so it needs no Entra directory permissions
       and no tenant-level admin consent. Friendly names for the principal, role and
-      scope come from the ARM 'expandedProperties' payload.
+      scope come from the ARM 'expandedProperties' payload. Subscription names
+      come from management-group descendant metadata.
 
     * Coverage is explicit, not assumed. The ARM list-for-scope operation returns
       assignments at, above and below the requested scope, but that downward
@@ -68,18 +69,17 @@
     without connecting to Azure. Intended for validation and demonstration.
 
 .EXAMPLE
-    .\Export-AzPimAssignmentInventory.ps1 -RootManagementGroupId 'mg-pirsa-root'
+    .\Export-AzPimAssignmentInventory.ps1 -RootManagementGroupId 'mg-demo-root'
 
 .EXAMPLE
-    .\Export-AzPimAssignmentInventory.ps1 -RootManagementGroupId 'mg-pirsa-root' `
+    .\Export-AzPimAssignmentInventory.ps1 -RootManagementGroupId 'mg-demo-root' `
         -ExpiryWarningDays 60 -OutputPath 'C:\Reports'
 
 .NOTES
     Requires : Az.Accounts (Connect-AzAccount first). Az.Resources is not required.
-    Rights   : Reader at the root management group is normally sufficient, because
-               listing needs Microsoft.Authorization/*/read. Microsoft documents
-               Owner or User Access Administrator for the PIM ARM API generally, so
-               if calls return 403, grant User Access Administrator instead.
+    Rights   : Read access to management groups and role assignments at the root
+               and descendants, normally Reader. If a scope returns 403, verify
+               its read permissions; this script does not grant or elevate access.
     Licence  : PIM requires Microsoft Entra ID P2 or Microsoft Entra ID Governance.
 #>
 
@@ -204,7 +204,10 @@ function Invoke-ArmList {
     subscription, as a list of ARM scope strings.
 #>
 function Get-TargetScope {
-    param([Parameter(Mandatory)][string]$ManagementGroupId)
+    param(
+        [Parameter(Mandatory)][string]$ManagementGroupId,
+        [hashtable]$SubscriptionNames = @{}
+    )
 
     $rootScope = "/providers/Microsoft.Management/managementGroups/$ManagementGroupId"
     $scopes    = [System.Collections.Generic.List[string]]::new()
@@ -217,6 +220,10 @@ function Get-TargetScope {
         # Descendants are either nested management groups or subscriptions.
         if ($d.type -like '*managementGroups/subscriptions') {
             $scopes.Add("/subscriptions/$($d.name)")
+            $displayName = Get-SafeProperty (Get-SafeProperty $d 'properties') 'displayName' ''
+            if (-not [string]::IsNullOrWhiteSpace($displayName)) {
+                $SubscriptionNames[$d.name] = $displayName
+            }
         }
         elseif ($d.type -like '*managementGroups') {
             $scopes.Add("/providers/Microsoft.Management/managementGroups/$($d.name)")
@@ -297,10 +304,28 @@ function ConvertTo-ReportRow {
     param(
         [Parameter(Mandatory)][AllowEmptyCollection()][object[]]$Instance,
         [Parameter(Mandatory)][int]$WarningDays,
-        [Parameter(Mandatory)][datetime]$Now
+        [Parameter(Mandatory)][datetime]$Now,
+        [hashtable]$SubscriptionNames = @{}
     )
 
     $rows = [System.Collections.Generic.List[object]]::new()
+    $names = $SubscriptionNames.Clone()
+
+    # Resolve offline subscription names before processing any child-scope rows.
+    foreach ($i in $Instance) {
+        $p = Get-SafeProperty $i 'properties'
+        $scopeInfo = Get-SafeProperty (Get-SafeProperty $p 'expandedProperties') 'scope'
+        $scope = Get-SafeProperty $p 'scope' (Get-SafeProperty $scopeInfo 'id' '')
+        if ($scope -match '^/subscriptions/([^/]+)$') {
+            $subscriptionId = $Matches[1]
+            $displayName = Get-SafeProperty $scopeInfo 'displayName' ''
+            if (-not [string]::IsNullOrWhiteSpace($displayName) -and
+                (-not $names.ContainsKey($subscriptionId) -or
+                 [string]::IsNullOrWhiteSpace($names[$subscriptionId]))) {
+                $names[$subscriptionId] = $displayName
+            }
+        }
+    }
 
     foreach ($i in $Instance) {
         $p        = Get-SafeProperty $i 'properties'
@@ -311,6 +336,16 @@ function ConvertTo-ReportRow {
         $scopeInfo      = Get-SafeProperty $expanded 'scope'
 
         $scope = Get-SafeProperty $p 'scope' (Get-SafeProperty $scopeInfo 'id' '')
+        $subscriptionName = ''
+        if ($scope -match '^/subscriptions/([^/]+)(?:/|$)') {
+            $subscriptionId = $Matches[1]
+            if (-not $names.ContainsKey($subscriptionId) -or
+                [string]::IsNullOrWhiteSpace($names[$subscriptionId])) {
+                $names[$subscriptionId] = "(unresolved: $subscriptionId)"
+                Write-Warning "Subscription name unavailable for $subscriptionId in hierarchy metadata or assignment data."
+            }
+            $subscriptionName = $names[$subscriptionId]
+        }
 
         $endRaw   = Get-SafeProperty $p 'endDateTime'
         $startRaw = Get-SafeProperty $p 'startDateTime'
@@ -346,9 +381,11 @@ function ConvertTo-ReportRow {
                 RoleType        = Get-SafeProperty $roleDefinition 'type' ''
                 AssignmentKind  = $category
                 MemberType      = Get-SafeProperty $p 'memberType' ''
+                SubscriptionName = $subscriptionName
                 ScopeName       = Get-SafeProperty $scopeInfo 'displayName' ''
                 ScopeType       = Get-ScopeType $scope
                 Scope           = $scope
+                ResourceUri     = $scope
                 StartDateUtc    = if ($start) { $start.ToString('yyyy-MM-dd HH:mm') } else { '' }
                 ExpiryDateUtc   = if ($end) { $end.ToString('yyyy-MM-dd HH:mm') } else { '' }
                 DaysRemaining   = if ($null -ne $daysRemaining) { $daysRemaining } else { '' }
@@ -403,8 +440,10 @@ function ConvertTo-HtmlReport {
         [void]$sb.Append("<td>$([System.Net.WebUtility]::HtmlEncode([string]$r.PrincipalType))</td>")
         [void]$sb.Append("<td>$([System.Net.WebUtility]::HtmlEncode([string]$r.RoleName))</td>")
         [void]$sb.Append("<td>$([System.Net.WebUtility]::HtmlEncode([string]$r.AssignmentKind))</td>")
+        [void]$sb.Append("<td>$([System.Net.WebUtility]::HtmlEncode([string]$r.SubscriptionName))</td>")
         [void]$sb.Append("<td>$([System.Net.WebUtility]::HtmlEncode([string]$r.ScopeType))</td>")
         [void]$sb.Append("<td title=""$([System.Net.WebUtility]::HtmlEncode([string]$r.Scope))"">$([System.Net.WebUtility]::HtmlEncode([string]$r.ScopeName))</td>")
+        [void]$sb.Append("<td class=""resource-uri"">$([System.Net.WebUtility]::HtmlEncode([string]$r.ResourceUri))</td>")
         [void]$sb.Append("<td>$([System.Net.WebUtility]::HtmlEncode([string]$r.ExpiryDateUtc))</td>")
         [void]$sb.Append("<td class=""num"">$([System.Net.WebUtility]::HtmlEncode([string]$r.DaysRemaining))</td>")
         [void]$sb.Append("<td><span class=""pill $cls"">$([System.Net.WebUtility]::HtmlEncode([string]$r.Status))</span></td>")
@@ -447,12 +486,14 @@ function ConvertTo-HtmlReport {
  .toolbar { display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
  input[type=search], select { padding:8px 11px; border:1px solid var(--line); border-radius:6px; font-size:13px; font-family:inherit; background:#fff; }
  input[type=search] { min-width:290px; }
+ .table-wrap { overflow-x:auto; }
  table { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:8px; overflow:hidden; font-size:13px; }
  th { background:#f3f2f1; text-align:left; padding:10px 12px; font-weight:600; cursor:pointer; white-space:nowrap; user-select:none; border-bottom:1px solid var(--line); }
  th:hover { background:#e9e8e7; }
  th::after { content:' \2195'; opacity:.35; font-size:11px; }
  td { padding:9px 12px; border-bottom:1px solid #f0f0f0; vertical-align:top; }
  td.num { text-align:right; font-variant-numeric:tabular-nums; }
+ td.resource-uri { min-width:240px; overflow-wrap:anywhere; }
  tbody tr:hover { background:#f7f9fc; }
  .pill { display:inline-block; padding:2px 9px; border-radius:11px; font-size:11.5px; font-weight:600; white-space:nowrap; }
  .st-expired { background:#fde7e9; color:#a4262c; }
@@ -480,7 +521,7 @@ $errorBlock
 </div>
 
 <div class="toolbar">
-  <input type="search" id="q" placeholder="Filter by principal, role, scope...">
+  <input type="search" id="q" placeholder="Filter by principal, role, subscription, scope...">
   <select id="statusFilter">
     <option value="">All statuses</option>
     <option value="Expired">Expired</option>
@@ -496,15 +537,18 @@ $errorBlock
   </select>
 </div>
 
+<div class="table-wrap">
 <table id="t">
 <thead><tr>
   <th>Principal</th><th>Type</th><th>Role</th><th>Assignment</th>
-  <th>Scope type</th><th>Scope</th><th>Expiry (UTC)</th><th>Days left</th><th>Status</th>
+  <th>Subscription</th><th>Scope type</th><th>Scope</th><th>Resource URI</th>
+  <th>Expiry (UTC)</th><th>Days left</th><th>Status</th>
 </tr></thead>
 <tbody>
 $rowsHtml
 </tbody>
 </table>
+</div>
 <footer>Hover a scope name to see its full Azure resource path. Click any column heading to sort.</footer>
 </main>
 <script>
@@ -523,7 +567,7 @@ $rowsHtml
     rows.forEach(function (r) {
       var text = r.textContent.toLowerCase();
       var okText = !term || text.indexOf(term) !== -1;
-      var okStatus = !status || r.cells[8].textContent.trim() === status;
+      var okStatus = !status || r.cells[10].textContent.trim() === status;
       var okKind = !kind || r.cells[3].textContent.trim() === kind;
       r.classList.toggle('hidden', !(okText && okStatus && okKind));
     });
@@ -563,6 +607,7 @@ $rowsHtml
 $now       = (Get-Date).ToUniversalTime()
 $stamp     = $now.ToString('yyyyMMdd-HHmm')
 $instances = [System.Collections.Generic.List[object]]::new()
+$subscriptionNames = @{}
 
 if (-not (Test-Path -LiteralPath $OutputPath)) {
     New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
@@ -581,7 +626,7 @@ else {
     Assert-Prerequisites
 
     Write-Step "Enumerating hierarchy beneath '$RootManagementGroupId'"
-    $scopes = Get-TargetScope -ManagementGroupId $RootManagementGroupId
+    $scopes = Get-TargetScope -ManagementGroupId $RootManagementGroupId -SubscriptionNames $subscriptionNames
     $mgCount  = @($scopes | Where-Object { $_ -like '*managementGroups*' }).Count
     $subCount = @($scopes | Where-Object { $_ -like '/subscriptions/*' }).Count
     Write-Step "Found $mgCount management group(s) and $subCount subscription(s)"
@@ -604,7 +649,7 @@ else {
 $unique = $instances | Group-Object { $_.id } | ForEach-Object { $_.Group[0] }
 Write-Step "Collected $($instances.Count) record(s), $(@($unique).Count) unique after de-duplication"
 
-$rows = ConvertTo-ReportRow -Instance @($unique) -WarningDays $ExpiryWarningDays -Now $now
+$rows = ConvertTo-ReportRow -Instance @($unique) -WarningDays $ExpiryWarningDays -Now $now -SubscriptionNames $subscriptionNames
 
 if (-not $IncludeActivations) {
     $before = $rows.Count
