@@ -73,7 +73,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-${{ matrix.os }}-${{ matrix.shell }}
           path: TestResults/
@@ -93,7 +93,7 @@ jobs:
             -OutputPath ./report -ReferenceDateUtc '2026-09-11 01:36'
 
       - name: Upload sample report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sample-report
           path: report/
