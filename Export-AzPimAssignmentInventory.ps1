@@ -69,17 +69,18 @@
     without connecting to Azure. Intended for validation and demonstration.
 
 .EXAMPLE
-    .\Export-AzPimAssignmentInventory.ps1 -RootManagementGroupId 'mg-demo-root'
+    .\Export-AzPimAssignmentInventory.ps1 -RootManagementGroupId 'mg-pirsa-root'
 
 .EXAMPLE
-    .\Export-AzPimAssignmentInventory.ps1 -RootManagementGroupId 'mg-demo-root' `
+    .\Export-AzPimAssignmentInventory.ps1 -RootManagementGroupId 'mg-pirsa-root' `
         -ExpiryWarningDays 60 -OutputPath 'C:\Reports'
 
 .NOTES
     Requires : Az.Accounts (Connect-AzAccount first). Az.Resources is not required.
-    Rights   : Read access to management groups and role assignments at the root
-               and descendants, normally Reader. If a scope returns 403, verify
-               its read permissions; this script does not grant or elevate access.
+    Rights   : Reader at the root management group is normally sufficient, because
+               listing needs Microsoft.Authorization/*/read. Microsoft documents
+               Owner or User Access Administrator for the PIM ARM API generally, so
+               if calls return 403, grant User Access Administrator instead.
     Licence  : PIM requires Microsoft Entra ID P2 or Microsoft Entra ID Governance.
 #>
 
