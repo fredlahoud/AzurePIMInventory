@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Azure PIM assignment inventory (sample data)</title>
 <style>
- :root { --ink:#1b1b1f; --muted:#5f6368; --line:#e3e3e6; --bg:#faf9f8; }
+ :root { --ink:#1b1b1f; --muted:#5f6368; --line:#e3e3e6; --bg:#faf9f8; --panel:#fff; --head:#f3f2f1; --hover:#f7f9fc; }
+ @media (prefers-color-scheme: dark) {
+   :root { --ink:#e6e6e6; --muted:#a0a0a0; --line:#3a3a3e; --bg:#1b1b1f; --panel:#242428; --head:#2d2d32; --hover:#2a2f38; }
+ }
  * { box-sizing:border-box; }
  body { font-family:'Segoe UI',system-ui,-apple-system,sans-serif; margin:0; background:var(--bg); color:var(--ink); }
  header { background:#0f6cbd; color:#fff; padding:20px 28px; }
@@ -13,27 +16,35 @@
  header p { margin:4px 0 0; font-size:13px; opacity:.9; }
  main { padding:22px 28px 60px; }
  .cards { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:20px; }
- .card { background:#fff; border:1px solid var(--line); border-radius:8px; padding:14px 18px; min-width:132px; }
+ .card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px 18px; min-width:132px; }
  .card .n { font-size:26px; font-weight:600; line-height:1.1; }
  .card .l { font-size:12px; color:var(--muted); margin-top:3px; }
- .card.bad .n { color:#a4262c; } .card.warnc .n { color:#a86200; } .card.perm .n { color:#7719aa; }
- .warn { background:#fff4ce; border:1px solid #e9c96a; border-radius:8px; padding:12px 16px; margin-bottom:18px; font-size:13px; }
+ .card.bad .n { color:#d13438; } .card.warnc .n { color:#c47a00; } .card.perm .n { color:#8e3bc4; } .card.pend .n { color:#0f6cbd; }
+ .card.priv { border-color:#d13438; }
+ .warn { background:#fff4ce; color:#3b2e00; border:1px solid #e9c96a; border-radius:8px; padding:12px 16px; margin-bottom:18px; font-size:13px; }
  .warn ul { margin:8px 0 0 18px; }
- .toolbar { display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
- input[type=search], select { padding:8px 11px; border:1px solid var(--line); border-radius:6px; font-size:13px; font-family:inherit; background:#fff; }
+ .toolbar { display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap; align-items:center; }
+ input[type=search], select, button { padding:8px 11px; border:1px solid var(--line); border-radius:6px; font-size:13px; font-family:inherit; background:var(--panel); color:var(--ink); }
+ button { cursor:pointer; }
+ button:hover { background:var(--head); }
+ label { font-size:13px; display:flex; gap:6px; align-items:center; }
  input[type=search] { min-width:290px; }
- table { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:8px; overflow:hidden; font-size:13px; }
- th { background:#f3f2f1; text-align:left; padding:10px 12px; font-weight:600; cursor:pointer; white-space:nowrap; user-select:none; border-bottom:1px solid var(--line); }
- th:hover { background:#e9e8e7; }
+ .count { font-size:12px; color:var(--muted); margin-left:auto; }
+ .table-wrap { overflow-x:auto; }
+ table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden; font-size:13px; }
+ th { background:var(--head); text-align:left; padding:10px 12px; font-weight:600; cursor:pointer; white-space:nowrap; user-select:none; border-bottom:1px solid var(--line); }
  th::after { content:' \2195'; opacity:.35; font-size:11px; }
- td { padding:9px 12px; border-bottom:1px solid #f0f0f0; vertical-align:top; }
+ td { padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
  td.num { text-align:right; font-variant-numeric:tabular-nums; }
- tbody tr:hover { background:#f7f9fc; }
+ td.resource-uri { min-width:240px; overflow-wrap:anywhere; color:var(--muted); }
+ tbody tr:hover { background:var(--hover); }
  .pill { display:inline-block; padding:2px 9px; border-radius:11px; font-size:11.5px; font-weight:600; white-space:nowrap; }
  .st-expired { background:#fde7e9; color:#a4262c; }
  .st-expiring { background:#fff4ce; color:#8a5700; }
  .st-ok { background:#dff6dd; color:#0b6a0b; }
  .st-permanent { background:#f3e8fb; color:#7719aa; }
+ .st-pending { background:#deecf9; color:#0f548c; }
+ .st-priv { background:#fde7e9; color:#a4262c; }
  footer { margin-top:18px; font-size:12px; color:var(--muted); }
  .hidden { display:none; }
 </style>
@@ -41,7 +52,7 @@
 <body>
 <header>
   <h1>Azure PIM assignment inventory (sample data)</h1>
-  <p>Generated 11 Sept 2026 11:36 &nbsp;|&nbsp; Expiry warning threshold: 30 days &nbsp;|&nbsp; Source: Azure Resource Manager (no Microsoft Graph)</p>
+  <p>Data as of 11 Sep 2026 01:36 UTC &nbsp;|&nbsp; Expiry warning threshold: 30 days &nbsp;|&nbsp; Source: Azure Resource Manager (no Microsoft Graph)</p>
 </header>
 <main>
 
@@ -52,35 +63,45 @@
   <div class="card perm"><div class="n">3</div><div class="l">No expiry</div></div>
   <div class="card"><div class="n">7</div><div class="l">Eligible</div></div>
   <div class="card"><div class="n">3</div><div class="l">Active</div></div>
+  <div class="card bad priv"><div class="n">3</div><div class="l">Standing privileged access</div></div>
+  
 </div>
 
 <div class="toolbar">
-  <input type="search" id="q" placeholder="Filter by principal, role, scope...">
-  <select id="statusFilter">
+  <input type="search" id="q" placeholder="Filter by principal, role, subscription, scope..." aria-label="Filter rows">
+  <select id="statusFilter" aria-label="Status">
     <option value="">All statuses</option>
     <option value="Expired">Expired</option>
     <option value="Expiring">Expiring</option>
+    <option value="Pending">Pending</option>
     <option value="Active">Active</option>
     <option value="Permanent">Permanent</option>
+    <option value="Unknown">Unknown</option>
   </select>
-  <select id="kindFilter">
+  <select id="kindFilter" aria-label="Assignment kind">
     <option value="">All assignment kinds</option>
     <option value="Eligible">Eligible</option>
     <option value="Active">Active</option>
     <option value="Activation (JIT)">Activation (JIT)</option>
   </select>
+  <label><input type="checkbox" id="privFilter"> Privileged roles only</label>
+  <button type="button" id="exportCsv">Export visible rows</button>
+  <span class="count" id="count"></span>
 </div>
 
+<div class="table-wrap">
 <table id="t">
 <thead><tr>
-  <th>Principal</th><th>Type</th><th>Role</th><th>Assignment</th>
-  <th>Scope type</th><th>Scope</th><th>Expiry (UTC)</th><th>Days left</th><th>Status</th>
+  <th>Principal</th><th>Type</th><th>Role</th><th>Privileged</th><th>Assignment</th>
+  <th>Subscription</th><th>Scope type</th><th>Scope</th><th>Resource URI</th>
+  <th>Expiry (UTC)</th><th>Days left</th><th>Status</th>
 </tr></thead>
 <tbody>
-<tr><td>SG-Finance-Billing-Readers</td><td>Group</td><td>Cost Management Contributor</td><td>Eligible</td><td>Subscription</td><td title="/subscriptions/dddddddd-0000-0000-0000-000000000001">PIRSA-Prod-Core</td><td>2026-08-20 00:00</td><td class="num">-23</td><td><span class="pill st-expired">Expired</span></td></tr><tr><td>SG-Azure-Web-Owners</td><td>Group</td><td>Owner</td><td>Eligible</td><td>Subscription</td><td title="/subscriptions/dddddddd-0000-0000-0000-000000000002">PIRSA-Prod-Web</td><td>2026-09-12 00:00</td><td class="num">0</td><td><span class="pill st-expiring">Expiring</span></td></tr><tr><td>SG-Azure-Prod-Contributors</td><td>Group</td><td>Contributor</td><td>Eligible</td><td>Management group</td><td title="/providers/Microsoft.Management/managementGroups/mg-pirsa-prod">PIRSA Production</td><td>2026-09-14 00:00</td><td class="num">2</td><td><span class="pill st-expiring">Expiring</span></td></tr><tr><td>SG-Azure-Platform-Owners</td><td>Group</td><td>Owner</td><td>Eligible</td><td>Management group</td><td title="/providers/Microsoft.Management/managementGroups/mg-pirsa-root">PIRSA Root</td><td>2026-09-25 00:00</td><td class="num">13</td><td><span class="pill st-expiring">Expiring</span></td></tr><tr><td>SG-Data-Platform-Admins</td><td>Group</td><td>Owner</td><td>Active</td><td>Resource group</td><td title="/subscriptions/dddddddd-0000-0000-0000-000000000003/resourceGroups/rg-data">rg-data</td><td>2026-09-30 00:00</td><td class="num">18</td><td><span class="pill st-expiring">Expiring</span></td></tr><tr><td>SG-Network-Engineers</td><td>Group</td><td>Network Contributor</td><td>Eligible</td><td>Resource</td><td title="/subscriptions/dddddddd-0000-0000-0000-000000000002/resourceGroups/rg-web/providers/Microsoft.Network/applicationGateways/agw-public">agw-public</td><td>2026-10-05 00:00</td><td class="num">23</td><td><span class="pill st-expiring">Expiring</span></td></tr><tr><td>Vendor Support Account (FinApp)</td><td>User</td><td>Contributor</td><td>Eligible</td><td>Resource group</td><td title="/subscriptions/dddddddd-0000-0000-0000-000000000001/resourceGroups/rg-finance-app">rg-finance-app</td><td>2027-03-01 00:00</td><td class="num">170</td><td><span class="pill st-ok">Active</span></td></tr><tr><td>Legacy Break Glass Account</td><td>User</td><td>User Access Administrator</td><td>Active</td><td>Management group</td><td title="/providers/Microsoft.Management/managementGroups/mg-pirsa-root">PIRSA Root</td><td></td><td class="num"></td><td><span class="pill st-permanent">Permanent</span></td></tr><tr><td>sp-terraform-deploy</td><td>ServicePrincipal</td><td>Contributor</td><td>Active</td><td>Subscription</td><td title="/subscriptions/dddddddd-0000-0000-0000-000000000001">PIRSA-Prod-Core</td><td></td><td class="num"></td><td><span class="pill st-permanent">Permanent</span></td></tr><tr><td>SG-Azure-ReadOnly</td><td>Group</td><td>Reader</td><td>Eligible</td><td>Subscription</td><td title="/subscriptions/dddddddd-0000-0000-0000-000000000003">PIRSA-NonProd</td><td></td><td class="num"></td><td><span class="pill st-permanent">Permanent</span></td></tr>
+<tr data-status="Expired" data-kind="Eligible" data-priv="0"><td>SG-Finance-Billing-Readers</td><td>Group</td><td>Cost Management Contributor</td><td></td><td>Eligible</td><td>PIRSA-Prod-Core</td><td>Subscription</td><td title="/subscriptions/dddddddd-0000-0000-0000-000000000001">PIRSA-Prod-Core</td><td class="resource-uri">/subscriptions/dddddddd-0000-0000-0000-000000000001</td><td data-sort="2026-08-20 00:00">2026-08-20 00:00</td><td class="num" data-sort="-23">-23</td><td><span class="pill st-expired">Expired</span></td></tr><tr data-status="Expiring" data-kind="Eligible" data-priv="1"><td>SG-Azure-Web-Owners</td><td>Group</td><td>Owner</td><td><span class="pill st-priv">Privileged</span></td><td>Eligible</td><td>PIRSA-Prod-Web</td><td>Subscription</td><td title="/subscriptions/dddddddd-0000-0000-0000-000000000002">PIRSA-Prod-Web</td><td class="resource-uri">/subscriptions/dddddddd-0000-0000-0000-000000000002</td><td data-sort="2026-09-12 00:00">2026-09-12 00:00</td><td class="num" data-sort="0">0</td><td><span class="pill st-expiring">Expiring</span></td></tr><tr data-status="Expiring" data-kind="Eligible" data-priv="1"><td>SG-Azure-Prod-Contributors</td><td>Group</td><td>Contributor</td><td><span class="pill st-priv">Privileged</span></td><td>Eligible</td><td></td><td>Management group</td><td title="/providers/Microsoft.Management/managementGroups/mg-pirsa-prod">PIRSA Production</td><td class="resource-uri">/providers/Microsoft.Management/managementGroups/mg-pirsa-prod</td><td data-sort="2026-09-14 00:00">2026-09-14 00:00</td><td class="num" data-sort="2">2</td><td><span class="pill st-expiring">Expiring</span></td></tr><tr data-status="Expiring" data-kind="Eligible" data-priv="1"><td>SG-Azure-Platform-Owners</td><td>Group</td><td>Owner</td><td><span class="pill st-priv">Privileged</span></td><td>Eligible</td><td></td><td>Management group</td><td title="/providers/Microsoft.Management/managementGroups/mg-pirsa-root">PIRSA Root</td><td class="resource-uri">/providers/Microsoft.Management/managementGroups/mg-pirsa-root</td><td data-sort="2026-09-25 00:00">2026-09-25 00:00</td><td class="num" data-sort="13">13</td><td><span class="pill st-expiring">Expiring</span></td></tr><tr data-status="Expiring" data-kind="Active" data-priv="1"><td>SG-Data-Platform-Admins</td><td>Group</td><td>Owner</td><td><span class="pill st-priv">Privileged</span></td><td>Active</td><td>PIRSA-NonProd</td><td>Resource group</td><td title="/subscriptions/dddddddd-0000-0000-0000-000000000003/resourceGroups/rg-data">rg-data</td><td class="resource-uri">/subscriptions/dddddddd-0000-0000-0000-000000000003/resourceGroups/rg-data</td><td data-sort="2026-09-30 00:00">2026-09-30 00:00</td><td class="num" data-sort="18">18</td><td><span class="pill st-expiring">Expiring</span></td></tr><tr data-status="Expiring" data-kind="Eligible" data-priv="0"><td>SG-Network-Engineers</td><td>Group</td><td>Network Contributor</td><td></td><td>Eligible</td><td>PIRSA-Prod-Web</td><td>Resource</td><td title="/subscriptions/dddddddd-0000-0000-0000-000000000002/resourceGroups/rg-web/providers/Microsoft.Network/applicationGateways/agw-public">agw-public</td><td class="resource-uri">/subscriptions/dddddddd-0000-0000-0000-000000000002/resourceGroups/rg-web/providers/Microsoft.Network/applicationGateways/agw-public</td><td data-sort="2026-10-05 00:00">2026-10-05 00:00</td><td class="num" data-sort="23">23</td><td><span class="pill st-expiring">Expiring</span></td></tr><tr data-status="Active" data-kind="Eligible" data-priv="1"><td>Vendor Support Account (FinApp)</td><td>User</td><td>Contributor</td><td><span class="pill st-priv">Privileged</span></td><td>Eligible</td><td>PIRSA-Prod-Core</td><td>Resource group</td><td title="/subscriptions/dddddddd-0000-0000-0000-000000000001/resourceGroups/rg-finance-app">rg-finance-app</td><td class="resource-uri">/subscriptions/dddddddd-0000-0000-0000-000000000001/resourceGroups/rg-finance-app</td><td data-sort="2027-03-01 00:00">2027-03-01 00:00</td><td class="num" data-sort="170">170</td><td><span class="pill st-ok">Active</span></td></tr><tr data-status="Permanent" data-kind="Eligible" data-priv="0"><td>SG-Azure-ReadOnly</td><td>Group</td><td>Reader</td><td></td><td>Eligible</td><td>PIRSA-NonProd</td><td>Subscription</td><td title="/subscriptions/dddddddd-0000-0000-0000-000000000003">PIRSA-NonProd</td><td class="resource-uri">/subscriptions/dddddddd-0000-0000-0000-000000000003</td><td data-sort="9999"></td><td class="num" data-sort="999999"></td><td><span class="pill st-permanent">Permanent</span></td></tr><tr data-status="Permanent" data-kind="Active" data-priv="1"><td>sp-terraform-deploy</td><td>ServicePrincipal</td><td>Contributor</td><td><span class="pill st-priv">Privileged</span></td><td>Active</td><td>PIRSA-Prod-Core</td><td>Subscription</td><td title="/subscriptions/dddddddd-0000-0000-0000-000000000001">PIRSA-Prod-Core</td><td class="resource-uri">/subscriptions/dddddddd-0000-0000-0000-000000000001</td><td data-sort="9999"></td><td class="num" data-sort="999999"></td><td><span class="pill st-permanent">Permanent</span></td></tr><tr data-status="Permanent" data-kind="Active" data-priv="1"><td>Legacy Break Glass Account</td><td>User</td><td>User Access Administrator</td><td><span class="pill st-priv">Privileged</span></td><td>Active</td><td></td><td>Management group</td><td title="/providers/Microsoft.Management/managementGroups/mg-pirsa-root">PIRSA Root</td><td class="resource-uri">/providers/Microsoft.Management/managementGroups/mg-pirsa-root</td><td data-sort="9999"></td><td class="num" data-sort="999999"></td><td><span class="pill st-permanent">Permanent</span></td></tr>
 </tbody>
 </table>
-<footer>Hover a scope name to see its full Azure resource path. Click any column heading to sort.</footer>
+</div>
+<footer>Hover a scope name to see its full Azure resource path. Click any column heading to sort. "Standing privileged access" counts active, non-JIT assignments of a privileged role.</footer>
 </main>
 <script>
 (function () {
@@ -90,22 +111,32 @@
   var q = document.getElementById('q');
   var sf = document.getElementById('statusFilter');
   var kf = document.getElementById('kindFilter');
+  var pf = document.getElementById('privFilter');
+  var count = document.getElementById('count');
 
   function applyFilter() {
     var term = q.value.toLowerCase();
-    var status = sf.value;
-    var kind = kf.value;
+    var visible = 0;
     rows.forEach(function (r) {
-      var text = r.textContent.toLowerCase();
-      var okText = !term || text.indexOf(term) !== -1;
-      var okStatus = !status || r.cells[8].textContent.trim() === status;
-      var okKind = !kind || r.cells[3].textContent.trim() === kind;
-      r.classList.toggle('hidden', !(okText && okStatus && okKind));
+      var ok = (!term || r.textContent.toLowerCase().indexOf(term) !== -1) &&
+               (!sf.value || r.getAttribute('data-status') === sf.value) &&
+               (!kf.value || r.getAttribute('data-kind') === kf.value) &&
+               (!pf.checked || r.getAttribute('data-priv') === '1');
+      r.classList.toggle('hidden', !ok);
+      if (ok) { visible++; }
     });
+    count.textContent = 'Showing ' + visible + ' of ' + rows.length;
   }
   q.addEventListener('input', applyFilter);
   sf.addEventListener('change', applyFilter);
   kf.addEventListener('change', applyFilter);
+  pf.addEventListener('change', applyFilter);
+  applyFilter();
+
+  function sortValue(cell) {
+    var v = cell.getAttribute('data-sort');
+    return v === null ? cell.textContent.trim() : v;
+  }
 
   var dir = {};
   Array.prototype.forEach.call(table.tHead.rows[0].cells, function (th, idx) {
@@ -113,14 +144,34 @@
       dir[idx] = !dir[idx];
       var sign = dir[idx] ? 1 : -1;
       rows.sort(function (a, b) {
-        var x = a.cells[idx].textContent.trim();
-        var y = b.cells[idx].textContent.trim();
-        var nx = parseFloat(x), ny = parseFloat(y);
-        if (!isNaN(nx) && !isNaN(ny)) { return (nx - ny) * sign; }
+        var x = sortValue(a.cells[idx]);
+        var y = sortValue(b.cells[idx]);
+        var nx = Number(x), ny = Number(y);
+        if (x !== '' && y !== '' && !isNaN(nx) && !isNaN(ny)) { return (nx - ny) * sign; }
         return x.localeCompare(y) * sign;
       });
       rows.forEach(function (r) { body.appendChild(r); });
     });
+  });
+
+  function csvCell(text) {
+    var s = text.replace(/\s+/g, ' ').trim();
+    if (/^[=+\-@]/.test(s) && isNaN(Number(s))) { s = "'" + s; }
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  document.getElementById('exportCsv').addEventListener('click', function () {
+    var lines = [Array.prototype.map.call(table.tHead.rows[0].cells, function (c) { return csvCell(c.textContent); }).join(',')];
+    rows.forEach(function (r) {
+      if (r.classList.contains('hidden')) { return; }
+      lines.push(Array.prototype.map.call(r.cells, function (c) { return csvCell(c.textContent); }).join(','));
+    });
+    var blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'pim-inventory-filtered.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   });
 })();
 </script>
