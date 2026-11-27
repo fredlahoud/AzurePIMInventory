@@ -1,0 +1,426 @@
+﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Azure PIM Inventory"
+        Width="1360" Height="860" MinWidth="1080" MinHeight="640"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="Segoe UI" FontSize="13"
+        Background="#FAF9F8" Foreground="#1B1B1F"
+        UseLayoutRounding="True" TextOptions.TextFormattingMode="Display">
+
+  <Window.Resources>
+    <SolidColorBrush x:Key="AccentBrush" Color="#0F6CBD"/>
+    <SolidColorBrush x:Key="AccentDarkBrush" Color="#0C5AA0"/>
+    <SolidColorBrush x:Key="LineBrush" Color="#E3E3E6"/>
+    <SolidColorBrush x:Key="MutedBrush" Color="#5F6368"/>
+
+    <Style x:Key="BaseButton" TargetType="Button">
+      <Setter Property="Padding" Value="14,6"/>
+      <Setter Property="Margin" Value="0,0,8,0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Background" Value="White"/>
+      <Setter Property="Foreground" Value="#1B1B1F"/>
+      <Setter Property="BorderBrush" Value="#C8C6C4"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bd" Property="Opacity" Value="0.88"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style x:Key="HeaderButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+      <Setter Property="Background" Value="White"/>
+      <Setter Property="Foreground" Value="#0F6CBD"/>
+      <Setter Property="BorderBrush" Value="White"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style x:Key="GhostHeaderButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="BorderBrush" Value="#7FB2E5"/>
+    </Style>
+
+    <Style x:Key="Card" TargetType="Border">
+      <Setter Property="Background" Value="White"/>
+      <Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="16,10"/>
+      <Setter Property="Margin" Value="0,0,10,10"/>
+      <Setter Property="MinWidth" Value="138"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style x:Key="CardNumber" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="26"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Text" Value="–"/>
+    </Style>
+    <Style x:Key="CardLabel" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+      <Setter Property="Margin" Value="0,2,0,0"/>
+    </Style>
+
+    <Style x:Key="FieldLabel" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="11.5"/>
+      <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+      <Setter Property="Margin" Value="0,0,0,3"/>
+    </Style>
+
+    <Style TargetType="ComboBox">
+      <Setter Property="Padding" Value="6,4"/>
+      <Setter Property="MinHeight" Value="28"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style TargetType="TextBox">
+      <Setter Property="Padding" Value="6,4"/>
+      <Setter Property="MinHeight" Value="28"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style TargetType="CheckBox">
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="0,0,16,0"/>
+    </Style>
+
+    <Style TargetType="DataGridColumnHeader">
+      <Setter Property="Background" Value="#F3F2F1"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Padding" Value="10,8"/>
+      <Setter Property="BorderBrush" Value="{StaticResource LineBrush}"/>
+      <Setter Property="BorderThickness" Value="0,0,1,1"/>
+    </Style>
+    <Style TargetType="DataGridCell">
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="10,0"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="DataGridCell">
+            <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}">
+              <ContentPresenter VerticalAlignment="Center"/>
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+      <Style.Triggers>
+        <Trigger Property="IsSelected" Value="True">
+          <Setter Property="Background" Value="#DEECF9"/>
+          <Setter Property="Foreground" Value="#1B1B1F"/>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+  </Window.Resources>
+
+  <DockPanel>
+
+    <!-- Header: product name, account, tenant sign-in -->
+    <Border DockPanel.Dock="Top" Background="{StaticResource AccentBrush}" Padding="20,12">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <Image x:Name="HeaderIcon" Width="34" Height="34" Margin="0,0,12,0" VerticalAlignment="Center"/>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+          <TextBlock Text="Azure PIM Inventory" Foreground="White" FontSize="20" FontWeight="SemiBold"/>
+          <TextBlock x:Name="SubtitleText" Foreground="#DDEBFA" FontSize="12"
+                     Text="Eligible and active role assignments across your management group hierarchy"/>
+        </StackPanel>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+          <StackPanel x:Name="AccountPanel" Orientation="Vertical" VerticalAlignment="Center" Margin="0,0,14,0" Visibility="Collapsed">
+            <TextBlock x:Name="AccountText" Foreground="White" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+            <TextBlock x:Name="TenantText" Foreground="#DDEBFA" FontSize="11.5" HorizontalAlignment="Right"/>
+          </StackPanel>
+          <Grid x:Name="TenantInputPanel" Width="260" Margin="0,0,8,0" VerticalAlignment="Center">
+            <TextBox x:Name="TenantBox" ToolTip="Tenant ID (GUID) or domain, e.g. contoso.onmicrosoft.com. Leave blank to use your home tenant."/>
+            <TextBlock x:Name="TenantPlaceholder" Text="Tenant ID or domain (optional)" Foreground="#8A8886"
+                       Margin="9,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"/>
+          </Grid>
+          <Button x:Name="SignInButton" Content="Sign in" Style="{StaticResource HeaderButton}"/>
+          <Button x:Name="SignOutButton" Content="Sign out" Style="{StaticResource GhostHeaderButton}" Visibility="Collapsed"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Status bar -->
+    <Border DockPanel.Dock="Bottom" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="16,6">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <ProgressBar x:Name="BusyBar" Width="140" Height="6" Margin="0,0,12,0" VerticalAlignment="Center" Visibility="Collapsed" Foreground="{StaticResource AccentBrush}"/>
+        <TextBlock x:Name="StatusText" Grid.Column="1" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" Text="Ready" TextTrimming="CharacterEllipsis"/>
+        <TextBlock x:Name="ScheduleText" Grid.Column="2" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}"/>
+      </Grid>
+    </Border>
+
+    <Grid Margin="20,14,20,12">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>  <!-- toolbar -->
+        <RowDefinition Height="Auto"/>  <!-- banner -->
+        <RowDefinition Height="Auto"/>  <!-- cards -->
+        <RowDefinition Height="Auto"/>  <!-- filters -->
+        <RowDefinition Height="*"/>     <!-- grid -->
+      </Grid.RowDefinitions>
+
+      <!-- Toolbar: what to collect and when -->
+      <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,12">
+        <WrapPanel x:Name="ToolbarPanel" Orientation="Horizontal" VerticalAlignment="Bottom">
+          <StackPanel Margin="0,0,14,0">
+            <TextBlock Text="Management group" Style="{StaticResource FieldLabel}"/>
+            <ComboBox x:Name="ManagementGroupCombo" Width="340" IsEditable="True" DisplayMemberPath="Label"
+                      ToolTip="Pick a management group, or type its ID (the name, not the display name)."/>
+          </StackPanel>
+          <StackPanel Margin="0,0,14,0">
+            <TextBlock Text="Expiry warning" Style="{StaticResource FieldLabel}"/>
+            <ComboBox x:Name="WarningDaysCombo" Width="110">
+              <ComboBoxItem Content="7 days" Tag="7"/>
+              <ComboBoxItem Content="14 days" Tag="14"/>
+              <ComboBoxItem Content="30 days" Tag="30" IsSelected="True"/>
+              <ComboBoxItem Content="60 days" Tag="60"/>
+              <ComboBoxItem Content="90 days" Tag="90"/>
+            </ComboBox>
+          </StackPanel>
+          <StackPanel Margin="0,0,14,0" VerticalAlignment="Bottom">
+            <CheckBox x:Name="IncludeFutureCheck" Content="Include future-dated" Margin="0,0,0,4"
+                      ToolTip="Also show assignments scheduled to start later (status 'Pending')."/>
+            <CheckBox x:Name="IncludeJitCheck" Content="Include JIT activations"
+                      ToolTip="Show transient just-in-time activations."/>
+          </StackPanel>
+          <Border Width="1" Background="{StaticResource LineBrush}" Margin="0,0,14,0" Height="44"/>
+          <StackPanel Margin="0,0,8,0">
+            <TextBlock Text="Auto-refresh" Style="{StaticResource FieldLabel}"/>
+            <ComboBox x:Name="RefreshScheduleCombo" Width="160" ToolTip="How often the dashboard reloads from Azure.">
+              <ComboBoxItem Content="Off" Tag="0"/>
+              <ComboBoxItem Content="Every 15 minutes" Tag="15"/>
+              <ComboBoxItem Content="Every 30 minutes" Tag="30"/>
+              <ComboBoxItem Content="Every hour" Tag="60" IsSelected="True"/>
+              <ComboBoxItem Content="Every 2 hours" Tag="120"/>
+              <ComboBoxItem Content="Every 4 hours" Tag="240"/>
+              <ComboBoxItem Content="Every 8 hours" Tag="480"/>
+              <ComboBoxItem Content="Every 12 hours" Tag="720"/>
+              <ComboBoxItem Content="Daily at…" Tag="daily"/>
+            </ComboBox>
+          </StackPanel>
+          <StackPanel x:Name="DailyTimePanel" Margin="0,0,14,0" Visibility="Collapsed">
+            <TextBlock Text="Time (24h)" Style="{StaticResource FieldLabel}"/>
+            <TextBox x:Name="DailyTimeBox" Width="70" Text="07:00" MaxLength="5"
+                     ToolTip="Local time of day to refresh, as HH:mm (for example 07:00 or 18:30)."/>
+          </StackPanel>
+          <StackPanel Margin="0,0,0,0" VerticalAlignment="Bottom" Orientation="Horizontal">
+            <Button x:Name="RefreshButton" Content="Refresh now" Style="{StaticResource PrimaryButton}" IsEnabled="False"/>
+          </StackPanel>
+        </WrapPanel>
+      </Border>
+
+      <!-- Warning / information banner -->
+      <Border x:Name="Banner" Grid.Row="1" Background="#FFF4CE" BorderBrush="#E9C96A" BorderThickness="1" CornerRadius="8"
+              Padding="14,10" Margin="0,0,0,12" Visibility="Collapsed">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <TextBlock x:Name="BannerText" TextWrapping="Wrap" Foreground="#3B2E00" VerticalAlignment="Center"/>
+          <Button x:Name="BannerActionButton" Grid.Column="1" Style="{StaticResource BaseButton}" Margin="12,0,0,0" Visibility="Collapsed"/>
+        </Grid>
+      </Border>
+
+      <!-- KPI cards (click to filter) -->
+      <WrapPanel Grid.Row="2" x:Name="CardsPanel">
+        <Border x:Name="CardTotal" Style="{StaticResource Card}" ToolTip="Show all">
+          <StackPanel><TextBlock x:Name="TotalCount" Style="{StaticResource CardNumber}"/><TextBlock Text="Total assignments" Style="{StaticResource CardLabel}"/></StackPanel>
+        </Border>
+        <Border x:Name="CardExpired" Style="{StaticResource Card}" ToolTip="Filter: Expired">
+          <StackPanel><TextBlock x:Name="ExpiredCount" Style="{StaticResource CardNumber}" Foreground="#A4262C"/><TextBlock Text="Expired" Style="{StaticResource CardLabel}"/></StackPanel>
+        </Border>
+        <Border x:Name="CardExpiring" Style="{StaticResource Card}" ToolTip="Filter: Expiring">
+          <StackPanel><TextBlock x:Name="ExpiringCount" Style="{StaticResource CardNumber}" Foreground="#A86200"/><TextBlock x:Name="ExpiringLabel" Text="Expiring ≤ 30 days" Style="{StaticResource CardLabel}"/></StackPanel>
+        </Border>
+        <Border x:Name="CardPermanent" Style="{StaticResource Card}" ToolTip="Filter: Permanent">
+          <StackPanel><TextBlock x:Name="PermanentCount" Style="{StaticResource CardNumber}" Foreground="#7719AA"/><TextBlock Text="No expiry" Style="{StaticResource CardLabel}"/></StackPanel>
+        </Border>
+        <Border x:Name="CardEligible" Style="{StaticResource Card}" ToolTip="Filter: Eligible">
+          <StackPanel><TextBlock x:Name="EligibleCount" Style="{StaticResource CardNumber}"/><TextBlock Text="Eligible" Style="{StaticResource CardLabel}"/></StackPanel>
+        </Border>
+        <Border x:Name="CardActive" Style="{StaticResource Card}" ToolTip="Filter: Active">
+          <StackPanel><TextBlock x:Name="ActiveCount" Style="{StaticResource CardNumber}"/><TextBlock Text="Active" Style="{StaticResource CardLabel}"/></StackPanel>
+        </Border>
+        <Border x:Name="CardStanding" Style="{StaticResource Card}" BorderBrush="#D13438" ToolTip="Filter: active, non-JIT assignments of a privileged role">
+          <StackPanel><TextBlock x:Name="StandingCount" Style="{StaticResource CardNumber}" Foreground="#A4262C"/><TextBlock Text="Standing privileged access" Style="{StaticResource CardLabel}"/></StackPanel>
+        </Border>
+        <Border x:Name="CardPending" Style="{StaticResource Card}" ToolTip="Filter: Pending" Visibility="Collapsed">
+          <StackPanel><TextBlock x:Name="PendingCount" Style="{StaticResource CardNumber}" Foreground="#0F548C"/><TextBlock Text="Pending (future start)" Style="{StaticResource CardLabel}"/></StackPanel>
+        </Border>
+      </WrapPanel>
+
+      <!-- Filters and exports -->
+      <Grid Grid.Row="3" Margin="0,2,0,10">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Orientation="Horizontal">
+          <Grid Width="320" Margin="0,0,10,0">
+            <TextBox x:Name="SearchBox"/>
+            <TextBlock x:Name="SearchPlaceholder" Text="Search principal, role, subscription, scope…" Foreground="#8A8886"
+                       Margin="9,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"/>
+          </Grid>
+          <ComboBox x:Name="StatusFilterCombo" Width="140" Margin="0,0,10,0">
+            <ComboBoxItem Content="All statuses" Tag="" IsSelected="True"/>
+            <ComboBoxItem Content="Expired" Tag="Expired"/>
+            <ComboBoxItem Content="Expiring" Tag="Expiring"/>
+            <ComboBoxItem Content="Pending" Tag="Pending"/>
+            <ComboBoxItem Content="Active" Tag="Active"/>
+            <ComboBoxItem Content="Permanent" Tag="Permanent"/>
+            <ComboBoxItem Content="Unknown" Tag="Unknown"/>
+          </ComboBox>
+          <ComboBox x:Name="KindFilterCombo" Width="170" Margin="0,0,10,0">
+            <ComboBoxItem Content="All assignment kinds" Tag="" IsSelected="True"/>
+            <ComboBoxItem Content="Eligible" Tag="Eligible"/>
+            <ComboBoxItem Content="Active" Tag="Active"/>
+            <ComboBoxItem Content="Activation (JIT)" Tag="Activation (JIT)"/>
+          </ComboBox>
+          <CheckBox x:Name="PrivilegedOnlyCheck" Content="Privileged roles only"/>
+          <Button x:Name="ClearFiltersButton" Content="Clear" Style="{StaticResource BaseButton}" Padding="10,4"/>
+        </StackPanel>
+        <TextBlock x:Name="CountText" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right"
+                   Margin="0,0,12,0" Foreground="{StaticResource MutedBrush}"/>
+        <StackPanel Grid.Column="2" Orientation="Horizontal">
+          <Button x:Name="ExportCsvButton" Content="Export CSV" Style="{StaticResource BaseButton}" IsEnabled="False"
+                  ToolTip="Save the rows currently shown to a CSV file."/>
+          <Button x:Name="HtmlReportButton" Content="Open HTML report" Style="{StaticResource BaseButton}" Margin="0" IsEnabled="False"
+                  ToolTip="Open the rows currently shown as a shareable HTML dashboard."/>
+        </StackPanel>
+      </Grid>
+
+      <!-- Data grid with empty-state overlay -->
+      <Grid Grid.Row="4">
+        <Border Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8">
+          <DataGrid x:Name="AssignmentGrid"
+                    AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
+                    CanUserReorderColumns="True" CanUserResizeColumns="True" CanUserSortColumns="True"
+                    HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F0F0F0"
+                    BorderThickness="0" Background="White" RowBackground="White" RowHeight="34"
+                    SelectionMode="Extended" SelectionUnit="FullRow" ClipboardCopyMode="IncludeHeader"
+                    EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                    VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+            <DataGrid.ContextMenu>
+              <ContextMenu>
+                <MenuItem x:Name="CopyRowMenu" Header="Copy selected rows"/>
+                <MenuItem x:Name="CopyScopeMenu" Header="Copy scope"/>
+                <MenuItem x:Name="CopyPrincipalIdMenu" Header="Copy principal object ID"/>
+                <Separator/>
+                <MenuItem x:Name="OpenPortalMenu" Header="Open scope in Azure portal"/>
+              </ContextMenu>
+            </DataGrid.ContextMenu>
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Principal" Binding="{Binding PrincipalName}" Width="2*" MinWidth="160"/>
+              <DataGridTextColumn Header="Type" Binding="{Binding PrincipalType}" Width="110"/>
+              <DataGridTextColumn Header="Role" Binding="{Binding RoleName}" Width="1.6*" MinWidth="140"/>
+              <DataGridTemplateColumn Header="Privileged" SortMemberPath="IsPrivileged" Width="96">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <Border x:Name="PrivPill" CornerRadius="10" Padding="8,1" HorizontalAlignment="Left" Background="#FDE7E9" Visibility="Collapsed">
+                      <TextBlock Text="Privileged" FontSize="11.5" FontWeight="SemiBold" Foreground="#A4262C"/>
+                    </Border>
+                    <DataTemplate.Triggers>
+                      <DataTrigger Binding="{Binding IsPrivileged}" Value="True">
+                        <Setter TargetName="PrivPill" Property="Visibility" Value="Visible"/>
+                      </DataTrigger>
+                    </DataTemplate.Triggers>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="Assignment" Binding="{Binding AssignmentKind}" Width="120"/>
+              <DataGridTextColumn Header="Subscription" Binding="{Binding SubscriptionName}" Width="1.4*" MinWidth="120"/>
+              <DataGridTextColumn Header="Scope type" Binding="{Binding ScopeType}" Width="120"/>
+              <DataGridTemplateColumn Header="Scope" SortMemberPath="ScopeName" Width="1.4*" MinWidth="120">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding ScopeName}" ToolTip="{Binding Scope}" TextTrimming="CharacterEllipsis"/>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+              <DataGridTextColumn Header="Expiry (UTC)" Binding="{Binding ExpiryDateUtc}" SortMemberPath="ExpirySort" Width="130"/>
+              <DataGridTextColumn Header="Days left" Binding="{Binding DaysRemaining}" SortMemberPath="DaysSort" Width="84">
+                <DataGridTextColumn.ElementStyle>
+                  <Style TargetType="TextBlock"><Setter Property="HorizontalAlignment" Value="Right"/></Style>
+                </DataGridTextColumn.ElementStyle>
+              </DataGridTextColumn>
+              <DataGridTemplateColumn Header="Status" SortMemberPath="StatusOrder" Width="104">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <Border x:Name="Pill" CornerRadius="10" Padding="8,1" HorizontalAlignment="Left" Background="#DFF6DD">
+                      <TextBlock x:Name="PillText" Text="{Binding Status}" FontSize="11.5" FontWeight="SemiBold" Foreground="#0B6A0B"/>
+                    </Border>
+                    <DataTemplate.Triggers>
+                      <DataTrigger Binding="{Binding Status}" Value="Expired">
+                        <Setter TargetName="Pill" Property="Background" Value="#FDE7E9"/>
+                        <Setter TargetName="PillText" Property="Foreground" Value="#A4262C"/>
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding Status}" Value="Unknown">
+                        <Setter TargetName="Pill" Property="Background" Value="#FDE7E9"/>
+                        <Setter TargetName="PillText" Property="Foreground" Value="#A4262C"/>
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding Status}" Value="Expiring">
+                        <Setter TargetName="Pill" Property="Background" Value="#FFF4CE"/>
+                        <Setter TargetName="PillText" Property="Foreground" Value="#8A5700"/>
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding Status}" Value="Permanent">
+                        <Setter TargetName="Pill" Property="Background" Value="#F3E8FB"/>
+                        <Setter TargetName="PillText" Property="Foreground" Value="#7719AA"/>
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding Status}" Value="Pending">
+                        <Setter TargetName="Pill" Property="Background" Value="#DEECF9"/>
+                        <Setter TargetName="PillText" Property="Foreground" Value="#0F548C"/>
+                      </DataTrigger>
+                    </DataTemplate.Triggers>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </DataGrid>
+        </Border>
+
+        <!-- Empty state: shown until signed in / data loaded -->
+        <Border x:Name="WelcomePanel" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8">
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="560">
+            <Image x:Name="WelcomeIcon" Width="64" Height="64" Margin="0,0,0,14"/>
+            <TextBlock x:Name="WelcomeTitle" Text="Sign in to your Azure tenant" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="WelcomeBody" TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource MutedBrush}" Margin="0,8,0,18"
+                       Text="Your browser will open for Microsoft sign-in (MFA and Conditional Access supported). Only Azure Resource Manager read access is used — no Microsoft Graph or directory permissions are required. Reader at the management group is normally enough."/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+              <Button x:Name="WelcomeSignInButton" Content="Sign in" Style="{StaticResource PrimaryButton}" Padding="22,8"/>
+              <Button x:Name="DemoButton" Content="Explore with sample data" Style="{StaticResource BaseButton}" Padding="18,8" Margin="0"/>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Grid>
+  </DockPanel>
+</Window>
