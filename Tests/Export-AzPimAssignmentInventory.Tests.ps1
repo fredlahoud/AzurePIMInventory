@@ -4,13 +4,14 @@ BeforeAll {
     $script:RepoRoot        = Split-Path -Parent $PSScriptRoot
     $script:InventoryScript = Join-Path $script:RepoRoot 'Export-AzPimAssignmentInventory.ps1'
     $script:SampleData      = Join-Path $script:RepoRoot 'sample-data.json'
+    $script:ModuleFile      = Join-Path $script:RepoRoot 'src/AzPimInventory/AzPimInventory.psm1'
 
-    # Load every function from the script without running its main body, so units
-    # can be tested in isolation. Parse errors fail the whole suite immediately.
+    # Load every function from the module file into this scope, so internal units
+    # can be tested and mocked in isolation. Parse errors fail the suite immediately.
     $tokens = $null
     $parseErrors = $null
     $ast = [System.Management.Automation.Language.Parser]::ParseFile(
-        $script:InventoryScript, [ref]$tokens, [ref]$parseErrors
+        $script:ModuleFile, [ref]$tokens, [ref]$parseErrors
     )
     if ($parseErrors.Count -gt 0) { throw ($parseErrors -join [Environment]::NewLine) }
 
@@ -23,6 +24,7 @@ BeforeAll {
     # Script-scope state the functions expect.
     $script:ArmApiVersion = '2020-10-01'
     $script:MgApiVersion  = '2020-05-01'
+    $script:DefaultPrivilegedRoleName = @('Owner', 'Contributor', 'User Access Administrator', 'Role Based Access Control Administrator')
     $script:ReportColumns = @(
         'PrincipalName', 'PrincipalType', 'PrincipalEmail', 'PrincipalId',
         'RoleName', 'RoleType', 'PrivilegedRole', 'AssignmentKind', 'MemberType',
@@ -390,6 +392,84 @@ Describe 'ConvertTo-HtmlReport' {
         )
         $html = ConvertTo-HtmlReport -Row $rows -Title 'T' -WarningDays 30 -Now $script:Now
         $html | Should -Match '<div class="n">1</div><div class="l">Standing privileged access'
+    }
+}
+
+Describe 'Get-PimManagementGroup' {
+    It 'lists groups with the tenant root first and readable labels' {
+        Mock Invoke-ArmList {
+            return , @(
+                [pscustomobject]@{ name = 'mg-prod'; properties = [pscustomobject]@{ displayName = 'Production'; tenantId = 't1' } }
+                [pscustomobject]@{ name = 't1'; properties = [pscustomobject]@{ displayName = 'Tenant Root Group'; tenantId = 't1' } }
+                [pscustomobject]@{ name = 'mg-bare'; properties = $null }
+            )
+        }
+
+        $groups = Get-PimManagementGroup
+
+        $groups[0].Id | Should -Be 't1'
+        $groups[0].IsTenantRoot | Should -BeTrue
+        ($groups | Where-Object Id -eq 'mg-prod').Label | Should -Be 'Production (mg-prod)'
+        ($groups | Where-Object Id -eq 'mg-bare').Label | Should -Be 'mg-bare'
+        Should -Invoke Invoke-ArmList -ParameterFilter { $Path -eq '/providers/Microsoft.Management/managementGroups?api-version=2020-05-01' }
+    }
+}
+
+Describe 'Get-PimInventory' {
+    It 'returns rows plus metadata in offline mode and reports progress' {
+        $progress = @{}
+        $inv = Get-PimInventory -OfflineSampleData $script:SampleData -ReferenceDateUtc '2026-09-11 01:36' -ProgressState $progress 6>$null 3>$null
+
+        $inv.Source | Should -Be 'Offline'
+        @($inv.Rows).Count | Should -Be 10
+        $inv.ExcludedActivations | Should -Be 1
+        $inv.UniqueCount | Should -Be 11
+        $inv.GeneratedUtc.Kind | Should -Be 'Utc'
+        $progress['Percent'] | Should -Be 100
+    }
+
+    It 'collects live scopes, records failures and drops ancestor assignments' {
+        Mock Assert-Prerequisite { }
+        Mock Get-TargetScope { return , @('/providers/Microsoft.Management/managementGroups/mg', '/subscriptions/s1') }
+        Mock Get-PimInstance {
+            if ($Scope -eq '/subscriptions/s1' -and $Kind -eq 'Active') {
+                $ErrorLog.Add([pscustomobject]@{ Scope = $Scope; Kind = $Kind; Message = 'denied' })
+                return , @()
+            }
+            if ($Kind -eq 'Eligible') {
+                return , @(
+                    Get-TestInstance -Id 'in' -Scope '/subscriptions/s1'
+                    Get-TestInstance -Id 'above' -Scope '/providers/Microsoft.Management/managementGroups/tenant-root'
+                )
+            }
+            return , @()
+        }
+
+        $inv = Get-PimInventory -RootManagementGroupId 'mg' 6>$null 3>$null
+
+        $inv.Rows.InstanceId | Should -Be @('in')
+        $inv.ExcludedAncestors | Should -Be 1
+        @($inv.ScopeErrors).Count | Should -Be 1
+        $inv.SubscriptionCount | Should -Be 1
+        $inv.ManagementGroupCount | Should -Be 1
+    }
+}
+
+Describe 'Module manifest' {
+    It 'is valid and exports exactly the public functions' {
+        $manifest = Test-ModuleManifest -Path (Join-Path $script:RepoRoot 'src/AzPimInventory/AzPimInventory.psd1')
+        @($manifest.ExportedFunctions.Keys | Sort-Object) | Should -Be @(
+            'ConvertTo-PimInventoryHtml', 'Export-PimInventoryCsv', 'Export-PimInventoryHtml', 'Get-PimInventory', 'Get-PimManagementGroup'
+        )
+    }
+
+    It 'imports cleanly and hides internal functions' {
+        $module = Import-Module (Join-Path $script:RepoRoot 'src/AzPimInventory/AzPimInventory.psd1') -Force -PassThru
+        try {
+            $module.ExportedFunctions.Keys | Should -Contain 'Get-PimInventory'
+            $module.ExportedFunctions.Keys | Should -Not -Contain 'Invoke-ArmList'
+        }
+        finally { Remove-Module $module }
     }
 }
 
