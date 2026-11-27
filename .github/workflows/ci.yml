@@ -48,17 +48,18 @@ jobs:
             shell: pwsh         # PowerShell 7
           - os: ubuntu-latest
             shell: pwsh
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Pester 5
-        shell: ${{ matrix.shell }}
         run: |
           Set-PSRepository PSGallery -InstallationPolicy Trusted
           Install-Module Pester -MinimumVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck
 
       - name: Run tests
-        shell: ${{ matrix.shell }}
         run: |
           Import-Module Pester -MinimumVersion 5.5.0
           $config = New-PesterConfiguration
