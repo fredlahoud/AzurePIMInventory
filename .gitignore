@@ -1,0 +1,14 @@
+# Reports generated at the repository root. SampleOutput/ is committed deliberately.
+/PIM-Assignment-Inventory-*.csv
+/PIM-Assignment-Inventory-*.html
+/report/
+
+# Test output
+TestResults/
+coverage.xml
+
+# Editor / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
