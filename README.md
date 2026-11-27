@@ -15,7 +15,39 @@ time-bound assignments quietly reach expiry unnoticed. This produces the single
 consolidated list, with expiry dates, that the portal does not — and highlights
 standing privileged access that bypasses just-in-time elevation.
 
-## Quick start
+## Desktop app
+
+![Dashboard](docs/images/dashboard.png)
+
+A Windows dashboard for people who would rather not use the command line.
+
+1. Download or clone the repository (if downloaded as a ZIP, right-click it →
+   **Properties** → **Unblock** before extracting).
+2. **Double-click `Start-PimDashboard.cmd`.**
+   Optional: run `.\Install-DesktopShortcut.ps1` once to add **Azure PIM Inventory**
+   to the Desktop and Start menu with its own icon.
+3. Click **Sign in**. Your browser opens for Microsoft sign-in (MFA and Conditional
+   Access supported). Enter a tenant ID or domain first if you work across several
+   tenants; leave it blank for your home tenant. An existing Azure PowerShell sign-in
+   is reused automatically.
+4. Pick a management group (the tenant root group is selected by default). The
+   inventory loads in the background and the window stays responsive.
+
+| Feature | Details |
+|---|---|
+| **Auto-refresh** | Choose **Off**, **every 15 / 30 minutes**, **every 1 / 2 / 4 / 8 / 12 hours**, or **Daily at…** a time you type (24-hour, e.g. `07:00`). Default: every hour. The status bar shows the last and next refresh. |
+| **KPI cards** | Total, Expired, Expiring, No expiry, Eligible, Active, **Standing privileged access**, Pending. Click a card to filter the grid. |
+| **Grid** | Sort any column, search, filter by status / assignment kind / privileged roles. Right-click to copy rows, scope or principal ID, or open the scope in the Azure portal. |
+| **Exports** | **Export CSV** and **Open HTML report** use the rows currently shown. |
+| **Sample data** | **Explore with sample data** shows the full experience without signing in. |
+| **Settings** | Tenant, management group, options and refresh schedule are remembered in `%LOCALAPPDATA%\AzPimInventory\settings.json`. Errors are logged to `app.log` in the same folder. |
+
+The app needs only `Az.Accounts`; if it is missing, the app offers to install it for
+your user account (no admin rights). It runs on Windows PowerShell 5.1 or PowerShell 7
+(preferred when installed). Auto-refresh runs while the app is open; for unattended
+reporting with the app closed, use the scheduled runbook described below.
+
+## Quick start (command line)
 
 ```powershell
 Install-Module Az.Accounts -Scope CurrentUser   # if not already present
@@ -180,6 +212,15 @@ Invoke-Pester ./Tests -Output Detailed
 Invoke-ScriptAnalyzer -Path . -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
 ```
 
+Use the module directly in your own scripts:
+
+```powershell
+Import-Module ./src/AzPimInventory/AzPimInventory.psd1
+$inventory = Get-PimInventory -RootManagementGroupId 'your-mg-id'
+$inventory.Rows | Where-Object Status -eq 'Expiring'
+Export-PimInventoryHtml -Inventory $inventory -Path ./pim.html
+```
+
 GitHub Actions runs the same lint and tests on Windows PowerShell 5.1, PowerShell 7
 on Windows and PowerShell 7 on Linux for every push and pull request to `main` and
 `dev`, and publishes the offline sample report as a build artifact.
@@ -188,10 +229,15 @@ on Windows and PowerShell 7 on Linux for every push and pull request to `main` a
 
 | File | Purpose |
 |---|---|
-| `Export-AzPimAssignmentInventory.ps1` | The script. |
+| `Start-PimDashboard.cmd` | Double-click to open the desktop dashboard. |
+| `Install-DesktopShortcut.ps1` | Adds Desktop and Start menu shortcuts (`-Remove` to undo). |
+| `App\` | Desktop dashboard: `PimDashboard.ps1`, `MainWindow.xaml`, icon. |
+| `src\AzPimInventory\` | PowerShell module with the collection, CSV and HTML logic, shared by the app and the script. |
+| `Export-AzPimAssignmentInventory.ps1` | Command-line script (for automation and runbooks). |
 | `sample-data.json` | Sample ARM payloads for offline preview. Not real data. |
 | `SampleOutput\` | Example CSV and HTML generated from the sample data. |
-| `Tests\` | Pester 5 test suite. |
+| `Tests\` | Pester 5 test suites for the module, script and app logic. |
+| `docs\images\` | Screenshots. |
 | `PSScriptAnalyzerSettings.psd1` | Lint rules used locally and in CI. |
 | `.github\workflows\ci.yml` | CI pipeline. |
 | `CHANGELOG.md` | Release notes. |

@@ -5,6 +5,32 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased] — `dev`
 
+### Added — desktop dashboard (2.0.0)
+- **Windows desktop app** (`App\`, WPF): double-click `Start-PimDashboard.cmd`, or
+  run `Install-DesktopShortcut.ps1` for Desktop / Start menu shortcuts with an icon.
+- **Tenant sign-in** through the browser (MFA / Conditional Access), optional
+  tenant ID or domain, reuse of an existing Azure PowerShell sign-in, sign-out.
+- **Management group picker** populated from ARM, tenant root selected by default;
+  an ID can also be typed when listing is not permitted.
+- **Configurable auto-refresh**: off, every 15 / 30 minutes, every 1 / 2 / 4 / 8 / 12
+  hours, or daily at a chosen time. Default every hour. Status bar shows last and
+  next refresh.
+- KPI cards that act as filters, sortable / searchable grid, right-click actions
+  (copy, open in Azure portal), CSV and HTML export of the visible rows, sample-data
+  mode, persisted settings, error log, one-click install of `Az.Accounts`.
+- All Azure calls run on background runspaces so the window never freezes.
+
+### Changed — architecture
+- Collection, CSV and HTML logic moved into the **`AzPimInventory` module**
+  (`src\AzPimInventory`), exporting `Get-PimInventory`, `Get-PimManagementGroup`,
+  `Export-PimInventoryCsv`, `ConvertTo-PimInventoryHtml`, `Export-PimInventoryHtml`.
+- `Export-AzPimAssignmentInventory.ps1` is now a thin wrapper over the module; its
+  parameters and output are unchanged (CSV verified byte-identical). It calls the
+  module with module-qualified names so a same-named function in the caller's
+  session can never be picked up instead.
+- Tests: 106 Pester tests, including the app's schedule, filter and settings
+  logic, a XAML/code consistency check and a WPF load test on Windows.
+
 ### Fixed
 - **Ancestor-scope filter used prefix matching.** `-like "$scope*"` treated a
   management group such as `mg-prod-legacy` (or any id sharing a prefix) as inside
